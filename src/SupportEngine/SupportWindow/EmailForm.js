@@ -3,16 +3,61 @@ import {styles} from "../styles"
 
 import {LoadingOutlined} from  "@ant-design/icons"
 import Avatar from "../Avatar";
+import axios from "axios";
 
 
 const EmailForm = props => {
     const [email, setEmail] = useState("")
     const [loading, setloading] = useState(false)
 
+    function getOrCreateUser(callback) {
+        axios.put(
+            "https://api.chatengine.io/users/",
+            {
+                "username": email,
+                "secret": email,
+                "email" : email,
+            },
+            {headers: {"Private-Key": process.env.REACT_APP_CE_PRIVATE_KEY}}
+
+        )
+        .then(r => callback(r.data))
+        .catch(e=> console.log("Get or create user error", e))
+
+
+    }
+
+    function getOrCreateChat (callback) {
+        axios.put(
+            "https://api.chatengine.io/chats/",
+            {
+                "usernames": ["JohnDoe", email],
+                "is_direct_chat": true
+            },
+            {headers: {
+                "Project-ID": process.env.REACT_APP_CE_PROJECT_ID,
+                "User-Name": email,
+                "User-Secret": email}}
+        )
+        .then(r => callback(r.data))
+        .catch(e => console.log('Get or create chat error', e))
+
+    }
+
    function handleSubmit (event) {
        event.preventDefault();
        setloading(true)
        console.log("sending email", email)
+
+       getOrCreateUser(
+           user => {
+               props.setUser(user)
+               getOrCreateChat(
+                   chat => props.setChat(chat)
+               )
+           }
+           
+       )
    }
 
     return (
@@ -20,8 +65,8 @@ const EmailForm = props => {
             style={{
                 ...styles.emailFormWindow,
                 ...{
-                    height: "100%",
-                    opacity: "1"
+                    height: props.visible ? "100%" : "0%",
+                    opacity: props.visible ? "1" : "0",
                 }
             }}
         >
@@ -67,7 +112,7 @@ const EmailForm = props => {
                     </div>
 
                     <form
-                        onSubmit={e => handleSubmit()}
+                        onSubmit={e => handleSubmit(e)}
                         style={{position: "relative", width: "100%", top: "20%"}}
                     >
                         <input
